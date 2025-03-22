@@ -8,8 +8,8 @@ movie_ids = [
 ]
 
 for movie_id in movie_ids:
-    url = f"{api_url}{movie_id}"
-    response = requests.get(url)
+    movie_url = f"{api_url}{movie_id}"
+    response = requests.get(movie_url)
     data = response.json()
     print(f"title : {data['title']}")
     print(f"overview : {data['overview']}")
