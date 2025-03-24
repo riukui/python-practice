@@ -1,32 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
 
-all_jobs = []
-
-def scrape_page(url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, "html.parser")
-    jobs = soup.find("section", class_="jobs").find_all("li")[1:-1]
-    
-    for job in jobs:
-        title = job.find("h4", class_="new-listing__header__title").text
-        region = job.find("p", class_="new-listing__company-headquarters").text
-        company = job.find("p", class_="new-listing__company-name").text
-        url = job.find("div", class_="tooltip--flag-logo").find("a")
-        job_url = link_tag["href"] if link_tag else "#"
-        print(title, "-------", region, "-------", company, "-------", job_url)
-        job_data = {
-            "title": title,
-            "region": region,
-            "company": company,
-            "url": f"https://weworkremotely.com/{job_url}"
-        }
-        all_jobs.append(job_data)
-
-scrape_page("https://weworkremotely.com/categories/remote-programming-jobs")
-
-"""
-
 BASE_URL = "https://berlinstartupjobs.com"
 ENGINEER_URL = f"{BASE_URL}/engineering"
 SKILL_URL = f"{BASE_URL}/skill-areas"
@@ -95,5 +69,3 @@ for i in range(len(skills)):
     print(f"There is(are) {len(all_jobs)} jobs for {skills[i]}")
     print(all_jobs)
     all_jobs=[]
-
-"""
