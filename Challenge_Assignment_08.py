@@ -1,99 +1,115 @@
 import requests
 from bs4 import BeautifulSoup
 
-all_jobs = []
 
-def scrape_page(url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, "html.parser")
-    jobs = soup.find("section", class_="jobs").find_all("li")[1:-1]
-    
-    for job in jobs:
-        title = job.find("h4", class_="new-listing__header__title").text
-        region = job.find("p", class_="new-listing__company-headquarters").text
-        company = job.find("p", class_="new-listing__company-name").text
-        url = job.find("div", class_="tooltip--flag-logo").find("a")
-        job_url = link_tag["href"] if link_tag else "#"
-        print(title, "-------", region, "-------", company, "-------", job_url)
-        job_data = {
-            "title": title,
-            "region": region,
-            "company": company,
-            "url": f"https://weworkremotely.com/{job_url}"
-        }
-        all_jobs.append(job_data)
+class Job:
+    # Job information Class
+    def __init__(self, title, company, description, links):
+        self.title = title
+        self.company = company
+        self.description = description
+        self.links = links
 
-scrape_page("https://weworkremotely.com/categories/remote-programming-jobs")
-
-"""
-
-BASE_URL = "https://berlinstartupjobs.com"
-ENGINEER_URL = f"{BASE_URL}/engineering"
-SKILL_URL = f"{BASE_URL}/skill-areas"
-
-skills = ["python", "typescript", "javascript", "rust"]
-
-all_jobs = []
+    def __repr__(self):
+        return f"Job(title='{self.title}', company='{self.company}')"
 
 
-def get_pages_count(url):
-    response = requests.get(
-        url,
-        headers={
+class JobScraper:
+    # URL Class
+    MAIN_URL = "https://berlinstartupjobs.com/"
+    ENGINEERING_URL = f"{MAIN_URL}engineering/"
+    SKILL_AREAS = [
+        f"{MAIN_URL}skill-areas/python",
+        f"{MAIN_URL}skill-areas/typescript",
+        f"{MAIN_URL}skill-areas/javascript",
+    ]
+
+    def __init__(self):
+        self.jobs = []
+
+    def fetch_html(self, url):
+        """ 주어진 URL에서 HTML을 가져옴 """
+        headers = {
             "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
-    )
-    soup = BeautifulSoup(response.content)
-    
-    buttons = soup.find("div", class_="bsj-template__b").find("ul", class_="bsj-nav").find_all("a", class_="page-numbers")
-    return len(buttons) 
+        response = requests.get(url, headers=headers)
+        return BeautifulSoup(response.text, "html.parser")
 
-def scrape_page(url):
-    response = requests.get(
-        url,
-        headers={
-            "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-    )
-    
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.content)
-            
-        jobs = soup.find("ul", class_="jobs-list-items").find_all("li", class_="bjs-jlid")
+    def get_total_pages(self, ENGINEERING_URL):
+        # ENGINEERING_URL에서 총 페이지 수 가져오기
+        soup = self.fetch_html(ENGINEERING_URL)
+        page_buttons = soup.find_all("a", class_="page-numbers")
+
+        if not page_buttons:
+            return 1
+        total_pages = max(
+            int(btn.text) for btn in page_buttons if btn.text.isdigit())
+        return total_pages
+
+    def scrape_jobs(self, url):
+        """ 현재 URL에서 직무 정보 스크래핑 """
+        soup = self.fetch_html(url)
+        jobs = soup.find_all("div", class_="bjs-jlid__wrapper")
+
         for job in jobs:
-            title = job.find("h4", class_="bjs-jlid__h").text
-            url = job.find("a", class_="bjs-jlid__b")["href"]
-            company = job.find("a", class_="bjs-jlid__b").text
-            description = job.find("div", class_="bjs-jlid__description").text
+            # 회사 이름
+            company = job.find("a", class_="bjs-jlid__b")
+            # 직무 제목
+            title = job.find("h4", class_="bjs-jlid__h").find("a")
+            # 설명
+            description = job.find("div", class_="bjs-jlid__description")
+            # 직무 링크
+            links = job.find_all("a", class_="bjs-bl bjs-bl-whisper")
+            # 직무명, 직무 링크를 넣을 딕션
+            link_dict = {}
+            for link in links:
+                link_text = link.text
+                link_href = link["href"]
+                link_dict[link.text] = link["href"]
+            self.jobs.append(Job(title, company, description, link_dict))
 
-            job_data = {
-                "title" : title,
-                "company" : company,
-                "description" : description,
-                "url" : f"https://weworkremotely.com{url}",
-            }
-            
-            all_jobs.append(job_data)
+    def scrape_all(self):
+        """ 모든 URL에서 직무 정보 스크래핑 """
+        # 공통 엔지니어링 페이지 스크래핑
+        total_pages = self.get_total_pages(self.ENGINEERING_URL)
+        print(f"(Engineering)에서 총 {total_pages} 페이지 발견")
+
+        for page in range(1, total_pages + 1):
+            page_url = f"{self.ENGINEERING_URL}/page/{page}/" if page > 1 else self.ENGINEERING_URL
+            print(f"📌 Scraping: {page_url}")
+            self.scrape_jobs(page_url)
+
+        # 특정 스킬 페이지 스크래핑
+        for SKILL_AREA in self.SKILL_AREAS:
+            self.scrape_jobs(SKILL_AREA)
+
+        self.display_jobs()
+
+    def display_jobs(self):
+        # 직무 정보 출력
+        for job in self.jobs:
+            print(f"Company: {job.company.text}")
+            print(f"Title: {job.title.text}")
+            print(f"Description: {job.description.text}")
+            print("Links:\n")
+            for text, url in job.links.items():
+                print(f"{text}: {url}")
+            print("\n----------------------------------------\n")
+
+    def get_pages(self, url):
+        # 페이지 수 수집
+        soup = self.fetch_html(url)
+        buttons = len(soup.find_all("a", class_="page-numbers"))
+        for i in range(buttons):
+            self.scrape_jobs(f"{self.ENGINEERING_URL}/page/{i+1}")
+        total_pages = get_pages(self.ENGINEERING_URL)
+        return len(soup.find_all("a", class_="page-numbers"))
 
 
-
-for page in range(get_pages_count(ENGINEER_URL)):
-    url = f"{ENGINEER_URL}/page/{page+1}/"
-    print(url)
-    scrape_page(url)
-print(f"There is(are) {len(all_jobs)} jobs.")    
-print(all_jobs)
-all_jobs = []
-
-for i in range(len(skills)):
-    url = f"{SKILL_URL}/{skills[i]}"    
-    print(url)
-    scrape_page(url)
-    
-    print(f"There is(are) {len(all_jobs)} jobs for {skills[i]}")
-    print(all_jobs)
-    all_jobs=[]
-
-"""
+# 실행 코드
+if __name__ == "__main__":
+    scraper = JobScraper()
+    scraper.scrape_all()
+    scraper.display_jobs()
