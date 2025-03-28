@@ -15,9 +15,10 @@ class Job:
 
 
 class JobScraper:
-    # URL Class
+    # URL
     MAIN_URL = "https://berlinstartupjobs.com/"
     ENGINEERING_URL = f"{MAIN_URL}engineering/"
+    # skill_Array
     SKILL_AREAS = [
         f"{MAIN_URL}skill-areas/python",
         f"{MAIN_URL}skill-areas/typescript",
@@ -28,7 +29,7 @@ class JobScraper:
         self.jobs = []
 
     def fetch_html(self, url):
-        """ 주어진 URL에서 HTML을 가져옴 """
+        # 주어진 URL에서 HTML을 가져옴
         headers = {
             "User-Agent":
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -49,7 +50,7 @@ class JobScraper:
         return total_pages
 
     def scrape_jobs(self, url):
-        """ 현재 URL에서 직무 정보 스크래핑 """
+        # 현재 URL에서 직무 정보 스크래핑
         soup = self.fetch_html(url)
         jobs = soup.find_all("div", class_="bjs-jlid__wrapper")
 
@@ -71,7 +72,7 @@ class JobScraper:
             self.jobs.append(Job(title, company, description, link_dict))
 
     def scrape_all(self):
-        """ 모든 URL에서 직무 정보 스크래핑 """
+        # 모든 URL에서 직무 정보 스크래핑
         # 공통 엔지니어링 페이지 스크래핑
         total_pages = self.get_total_pages(self.ENGINEERING_URL)
         print(f"(Engineering)에서 총 {total_pages} 페이지 발견")
